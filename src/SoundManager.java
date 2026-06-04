@@ -9,8 +9,12 @@ public class SoundManager {
     public static void init() {
         preloadSound("hitHurt", "assets/sfx/hitHurt.wav");
         preloadSound("hitHurt2", "assets/sfx/hitHurt2.wav");
+        preloadSound("hitHurt3", "assets/sfx/hitHurt3.wav");
+        preloadSound("explosion", "assets/sfx/explosion.wav");
+        preloadSound("explosionPitched", "assets/sfx/explosionPitched.wav");
         preloadSound("jump", "assets/sfx/jump.wav");
         preloadSound("laserShoot", "assets/sfx/laserShoot.wav");
+        preloadSound("powerUp", "assets/sfx/powerUp.wav");
         preloadSound("music_1", "assets/musics/music_1.wav");
         preloadSound("music_2", "assets/musics/music_2.wav");
         preloadSound("music_3", "assets/musics/music_3.wav");

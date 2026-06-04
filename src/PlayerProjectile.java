@@ -1,6 +1,6 @@
 public class PlayerProjectile extends BaseProjectile {
     public PlayerProjectile(Game _game, double x, double y, double dirX, double dirY, BaseStats _baseStats) {
-        super(_game, x, y, dirX, dirY, _baseStats, 100);
+        super(_game, x, y, dirX, dirY, _baseStats, 100 * _baseStats.projectileSpeedMultiplier);
     }
 
     @Override
@@ -14,8 +14,13 @@ public class PlayerProjectile extends BaseProjectile {
 
             double damageApplied = baseDamage * baseStats.damageMultiplier;
 
+            if (baseStats.bleedProjectile) {
+                enemy.bleeding = true;
+                enemy.bleedingDamage++;
+            }
+
             enemy.applyDamage(damageApplied);
-            SoundManager.play("hitHurt");
+            SoundManager.play("hitHurt3");
 
             TextFalling textFalling = new TextFalling(game, 0.6, "-" + String.format("%.2f", damageApplied));
             textFalling.x = x;
@@ -25,7 +30,7 @@ public class PlayerProjectile extends BaseProjectile {
         }
 
         if (other instanceof Ground ground) {
-            //Game(new AnimationEntity(x, y, Assets.EXPLOSION));
+            game.addEntity(new AnimationEntity(game, x - 5, y - 5, Assets.EXPLOSION));
 
             destroyed = true;
             SoundManager.play("hitHurt");

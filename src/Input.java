@@ -2,24 +2,30 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class Input implements KeyListener, MouseListener {
 
-    static HashMap<Integer, Boolean> currentKeys = new HashMap<>();
-    static HashMap<Integer, Boolean> previousKeys = new HashMap<>();
+    private static final HashMap<Integer, Boolean> currentKeys = new HashMap<>();
+    private static final HashSet<Integer> keysPressedThisFrame = new HashSet<>();
+    private static final HashSet<Integer> keysReleasedThisFrame = new HashSet<>();
 
-    static HashMap<Integer, Boolean> currentMouseButtons = new HashMap<>();
-    static HashMap<Integer, Boolean> previousMouseButtons = new HashMap<>();
+    private static final HashMap<Integer, Boolean> currentMouseButtons = new HashMap<>();
+    private static final HashSet<Integer> mousePressedThisFrame = new HashSet<>();
+    private static final HashSet<Integer> mouseReleasedThisFrame = new HashSet<>();
 
     public static Point mousePosition = new Point();
     public static Point screenMousePosition = new Point();
 
-    static JPanel panel;
+    private static JPanel panel;
 
-    Input(JPanel _panel) {
-        panel = _panel;
+    public Input(JPanel panel) {
+        Input.panel = panel;
     }
 
+    /**
+     * Call ONCE per frame, preferably at the END of the game loop.
+     */
     public static void update() {
 
         Point currentMousePosition = panel.getMousePosition();
@@ -32,11 +38,11 @@ public class Input implements KeyListener, MouseListener {
             screenMousePosition.y = currentMousePosition.y;
         }
 
-        previousKeys.clear();
-        previousKeys.putAll(currentKeys);
+        keysPressedThisFrame.clear();
+        keysReleasedThisFrame.clear();
 
-        previousMouseButtons.clear();
-        previousMouseButtons.putAll(currentMouseButtons);
+        mousePressedThisFrame.clear();
+        mouseReleasedThisFrame.clear();
     }
 
     // =========================
@@ -48,19 +54,11 @@ public class Input implements KeyListener, MouseListener {
     }
 
     public static boolean isKeyJustPressed(int key) {
-
-        boolean current = currentKeys.getOrDefault(key, false);
-        boolean previous = previousKeys.getOrDefault(key, false);
-
-        return current && !previous;
+        return keysPressedThisFrame.contains(key);
     }
 
     public static boolean isKeyJustReleased(int key) {
-
-        boolean current = currentKeys.getOrDefault(key, false);
-        boolean previous = previousKeys.getOrDefault(key, false);
-
-        return !current && previous;
+        return keysReleasedThisFrame.contains(key);
     }
 
     // =========================
@@ -72,46 +70,60 @@ public class Input implements KeyListener, MouseListener {
     }
 
     public static boolean isMouseJustPressed(int button) {
-
-        boolean current = currentMouseButtons.getOrDefault(button, false);
-        boolean previous = previousMouseButtons.getOrDefault(button, false);
-
-        return current && !previous;
+        return mousePressedThisFrame.contains(button);
     }
 
     public static boolean isMouseJustReleased(int button) {
-
-        boolean current = currentMouseButtons.getOrDefault(button, false);
-        boolean previous = previousMouseButtons.getOrDefault(button, false);
-
-        return !current && previous;
+        return mouseReleasedThisFrame.contains(button);
     }
 
     // =========================
-    // EVENTS
+    // KEY EVENTS
     // =========================
 
     @Override
     public void keyPressed(KeyEvent e) {
-        currentKeys.put(e.getKeyCode(), true);
+        int key = e.getKeyCode();
+
+        if (!currentKeys.getOrDefault(key, false)) {
+            keysPressedThisFrame.add(key);
+        }
+
+        currentKeys.put(key, true);
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-        currentKeys.put(e.getKeyCode(), false);
+        int key = e.getKeyCode();
+
+        currentKeys.put(key, false);
+        keysReleasedThisFrame.add(key);
     }
 
     @Override
     public void keyTyped(KeyEvent e) {}
 
+    // =========================
+    // MOUSE EVENTS
+    // =========================
+
     @Override
     public void mousePressed(MouseEvent e) {
-        currentMouseButtons.put(e.getButton(), true);
+        int button = e.getButton();
+
+        if (!currentMouseButtons.getOrDefault(button, false)) {
+            mousePressedThisFrame.add(button);
+        }
+
+        currentMouseButtons.put(button, true);
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        currentMouseButtons.put(e.getButton(), false);
+        int button = e.getButton();
+
+        currentMouseButtons.put(button, false);
+        mouseReleasedThisFrame.add(button);
     }
 
     @Override

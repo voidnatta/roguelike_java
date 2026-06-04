@@ -22,6 +22,7 @@ public class EnemyProjectile extends BaseProjectile {
         if (other instanceof Ground ground) {
             destroyed = true;
             SoundManager.play("hitHurt");
+            game.addEntity(new AnimationEntity(game, x - 5, y - 5, Assets.EXPLOSION));
         }
     }
 }

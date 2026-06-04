@@ -15,25 +15,25 @@ enum GameState {
 public class Game {
     private final ArrayList<Entity> entities = new ArrayList<>();
 
-    public int playerHealth = 100;
-    public int playerMaxHealth = 100;
-
     public int currentWave = 1;
 
     public int enemiesToSpawn;
     public int enemiesSpawned;
     public int enemiesKilled;
 
-    GameState gameState = GameState.GAMEPLAY;
+    GameState gameState = GameState.LEVEL_UP;
     GameState lastState = GameState.GAMEPLAY;
 
     boolean isPlayerAlive() {
-        return playerHealth >= 0;
+        return player.health >= 0;
     }
 
     Player player = new Player(this);
     Ground ground = new Ground(this);
 
+    private final Random random = new Random();
+
+    ArrayList<Card> cardPool = new ArrayList<>();
     ArrayList<Card> cards = new ArrayList<>();
 
     BufferedImage gameBuffer = new BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB);
@@ -41,21 +41,47 @@ public class Game {
     double spawnTimer = 0;
     double spawnInterval = 1.0;
 
+    boolean canShoot = false;
+    double canShootTimer = 0.5;
+
     Graphics2D g2;
 
     void init() {
         startWave(1);
-        SoundManager.loop("music_1");
+        SoundManager.loop("music_2");
 
         player.x = (double)GameConfig.SCREEN_WIDTH / 2 - 25;
-        player.y = 0;
+        player.y = GameConfig.SCREEN_HEIGHT - 37;;
 
         addEntity(player);
         addEntity(ground);
 
-        cards.add(new Card("Damager", "+20% damage", new DamageEffect(1.2)));
-        cards.add(new Card("Damager", "+50% damage", new DamageEffect(1.5)));
-        cards.add(new Card("Resistance", "+1 Projectile \nhp", new ProjectHealthEffect(1)));
+        cardPool.add(new Card("Furious", "+20% damage",
+                new DamageEffect(false, 1.2)));
+        cardPool.add(new Card("Resistance", "+1 Projectile\nHP",
+                new ProjectHealthEffect(false, 1)));
+        cardPool.add(new Card("I'm Late", "+5% Projectile\nSpeed",
+                new SpeedEffect(false, 1.05)));
+        cardPool.add(new Card("Berserk", "+50% damage",
+                new DamageEffect(true, 1.5)));
+        cardPool.add(new Card("I'm Too Late", "+15% Projectile\nSpeed",
+                new SpeedEffect(true, 1.15)));
+        cardPool.add(new Card("Save me", "25% of Max HP",
+                new HealthEffect(false, (double) player.maxHealth / 1.25)));
+        cardPool.add(new Card("Save me+", "+50% of Max HP",
+                new HealthEffect(true, (double) player.maxHealth / 2)));
+        cardPool.add(new Card("Stronger", "+10 Max HP",
+                new MaxHealthEffect(false, 25)));
+        cardPool.add(new Card("Stronger+", "+25 Max HP",
+                new MaxHealthEffect(true, 50)));
+        cardPool.add(new Card("Pull the trigger", "+15% Fire rate",
+                new FasterShooterEffect(false, 1-0.15)));
+        cardPool.add(new Card("Pull the trigger+", "+25% Fire rate",
+                new FasterShooterEffect(true, 1-0.25)));
+        cardPool.add(new Card("Bleeding", "Enemy gets\n+1 damage \nevery second.\n(Can stack)",
+                new BleedEffect(false)));
+
+        generateLevelUpCards();
     }
 
     public void addEntity(Entity entity) {
@@ -71,7 +97,6 @@ public class Game {
             if (Input.isKeyJustPressed(KeyEvent.VK_ESCAPE)) {
                 gameState = lastState;
             }
-            Input.update();
 
             return;
         }
@@ -82,9 +107,15 @@ public class Game {
                 gameState = GameState.PAUSED;
             }
 
-            handleCardSelection();
+            int mouseX = Input.screenMousePosition.x;
+            int mouseY = Input.screenMousePosition.y;
 
-            Input.update();
+            for (Card card : cards) {
+                boolean isHovered = card.bounds.contains(mouseX, mouseY);
+                card.updateHover(isHovered, delta);
+            }
+
+            handleCardSelection();
             return;
         }
 
@@ -95,8 +126,62 @@ public class Game {
                 gameState = GameState.PAUSED;
             }
 
+            if (canShootTimer <= 0) {
+                canShoot = true;
+            }
+            else {
+                canShootTimer -= delta;
+            }
+
+
             for (int i = 0; i < entities.size(); i++) {
                 entities.get(i).update(delta);
+            }
+
+            for (int i = 0; i < entities.size(); i++) {
+                for (int j = i + 1; j < entities.size(); j++) {
+
+                    if (!(entities.get(i) instanceof Enemy a))
+                        continue;
+
+                    if (!(entities.get(j) instanceof Enemy b))
+                        continue;
+
+                    double centerAX = a.x + a.width / 2.0;
+                    double centerAY = a.y + a.height / 2.0;
+
+                    double centerBX = b.x + b.width / 2.0;
+                    double centerBY = b.y + b.height / 2.0;
+
+                    double dx = centerBX - centerAX;
+                    double dy = centerBY - centerAY;
+
+                    double distSq = dx * dx + dy * dy;
+
+                    if (distSq == 0)
+                        continue;
+
+                    double dist = Math.sqrt(distSq);
+
+                    double minDistance =
+                            (a.width + b.width) / 2.0;
+
+                    if (dist < minDistance) {
+
+                        double nx = dx / dist;
+                        double ny = dy / dist;
+
+                        double overlap = minDistance - dist;
+
+                        double pushForce = overlap * 40.0;
+
+                        a.velX -= nx * pushForce;
+                        a.velY -= ny * pushForce;
+
+                        b.velX += nx * pushForce;
+                        b.velY += ny * pushForce;
+                    }
+                }
             }
 
             spawnTimer -= delta;
@@ -125,6 +210,7 @@ public class Game {
                         enemy.destroyed = true;
                     }
                 }
+                generateLevelUpCards();
                 gameState = GameState.LEVEL_UP;
             }
 
@@ -141,9 +227,8 @@ public class Game {
             }
 
             entities.removeIf(e -> e.destroyed);
-
-            Input.update();
         }
+
     }
 
     void draw(Graphics g) {
@@ -197,12 +282,24 @@ public class Game {
     }
 
     void startWave(int wave) {
-        enemiesToSpawn = 5 + wave * wave;
+        currentWave = wave;
+
+        enemiesToSpawn = (int)(2 * Math.pow(1.5, wave - 1));
+
         enemiesSpawned = 0;
         enemiesKilled = 0;
 
         spawnTimer = 0;
-        spawnInterval *= 0.95;
+
+        // Spawn rate increases gradually
+        spawnInterval = Math.max(
+                0.15,
+                Math.pow(0.96, wave)
+        );
+    }
+
+    public boolean canShoot() {
+        return canShoot;
     }
 
     void handleCardSelection() {
@@ -219,8 +316,47 @@ public class Game {
 
                     gameState = GameState.GAMEPLAY;
 
+                    SoundManager.play("powerUp");
+                    canShoot = false;
+                    canShootTimer = 0.5;
                     break;
                 }
+            }
+        }
+    }
+
+    void generateLevelUpCards() {
+        cards.clear();
+
+        ArrayList<Card> commons = new ArrayList<>();
+        ArrayList<Card> rares = new ArrayList<>();
+
+        for (Card card : cardPool) {
+            if (card.effect.isRare()) {
+                rares.add(card);
+            } else {
+                commons.add(card);
+            }
+        }
+
+        while (cards.size() < 3) {
+
+            // 10% chance for a rare card
+            boolean wantRare =
+                    random.nextDouble() < 0.10 &&
+                            !rares.isEmpty();
+
+            ArrayList<Card> source =
+                    wantRare ? rares : commons;
+
+            if (source.isEmpty())
+                source = wantRare ? commons : rares;
+
+            Card selected =
+                    source.get(random.nextInt(source.size()));
+
+            if (!cards.contains(selected)) {
+                cards.add(selected);
             }
         }
     }
@@ -230,64 +366,93 @@ public class Game {
         Font font = (Assets.pixelFont != null) ? Assets.pixelFont : g.getFont();
 
         g.setFont(font.deriveFont(Font.PLAIN, 24.0f));
+
         g.drawString(
-                "HP " + Math.clamp(playerHealth, 0, playerMaxHealth) + "/" + playerMaxHealth,
+                "WAVE " + currentWave,
                 10,
                 30
         );
 
-        g.setColor(new Color(34, 35, 35));
-        g.fillRect(10, 40, (int)(((double)playerHealth / 100.0) * 200.0), 20);
+        g.drawString(
+                "HP " + Math.clamp(player.health, 0, player.maxHealth) + "/" + player.maxHealth,
+                10,
+                60
+        );
 
-        int targetWidth = (int)(((double)playerHealth / 100.0) * 200.0);
+        g.setColor(new Color(34, 35, 35));
+        g.fillRect(
+                10,
+                70,
+                (int)(((double) player.health / player.maxHealth) * 200.0),
+                20
+        );
+
+        int targetWidth = (int)(((double) player.health / player.maxHealth) * 200.0);
+
         g.setColor(new Color(240, 246, 240));
-        g.drawRect(10, 40, Math.max(targetWidth, 2), 20);
+        g.drawRect(
+                10,
+                70,
+                Math.max(targetWidth, 2),
+                20
+        );
 
         g.drawString(
                 enemiesKilled + "/" + enemiesToSpawn,
                 10,
-                90
+                120
         );
     }
 
     void drawCards(Graphics g) {
-        int cardWidth = 85*2;
-        int cardHeight = 120*2;
+        int baseWidth = 85 * 2;
+        int baseHeight = 120 * 2;
         int spacing = 40;
 
-        int totalWidth =
-                cards.size() * cardWidth +
-                        (cards.size() - 1) * spacing;
+        int totalWidth = cards.size() * baseWidth + (cards.size() - 1) * spacing;
 
         int startX = (GameConfig.getRealScreenWidth() - totalWidth) / 2;
-        int y = (GameConfig.getRealScreenHeight() - cardHeight) / 2;
+        int baseY = (GameConfig.getRealScreenHeight() - baseHeight) / 2;
 
         for (int i = 0; i < cards.size(); i++) {
             Card card = cards.get(i);
 
-            int x = startX + i * (cardWidth + spacing);
+            int baseLayoutX = startX + i * (baseWidth + spacing);
 
-            card.bounds.setBounds(x, y, cardWidth, cardHeight);
+            double scaleFactor = 1.0 + (0.15 * card.hoverProgress);
+
+            int currentWidth = (int) (baseWidth * scaleFactor);
+            int currentHeight = (int) (baseHeight * scaleFactor);
+
+            int x = baseLayoutX - (currentWidth - baseWidth) / 2;
+            int y = baseY - (currentHeight - baseHeight) / 2;
+
+            card.bounds.setBounds(x, y, currentWidth, currentHeight);
 
             g.setColor(new Color(34, 35, 35));
-            g.fillRect(x, y, cardWidth, cardHeight);
+            g.fillRect(x, y, currentWidth, currentHeight);
 
-            g.setColor(Color.WHITE);
-            g.drawRect(x, y, cardWidth, cardHeight);
+            g.setColor(new Color(240, 246, 240));
+            g.drawRect(x, y, currentWidth, currentHeight);
 
             Font currentFont = g.getFont();
-            Font newFont = currentFont.deriveFont(20.0f); // Sets size to 24
-            g.setFont(newFont);
-            g.drawString(card.name, x + 2, y + 25);
+
+            float fontSize = (float) (18.0f + (3.0f * card.hoverProgress));
+            g.setFont(currentFont.deriveFont(fontSize));
+
+            g.drawString(card.name, x + 5, y + (int)(25 * scaleFactor));
 
             String[] lines = card.description.split("\n");
-
             int lineHeight = g.getFontMetrics().getHeight() - 5;
-            int textY = y + 75;
+            int textY = y + (int)(75 * scaleFactor);
 
             for (String line : lines) {
-                g.drawString(line, x + 2, textY);
+                g.drawString(line, x + 5, textY);
                 textY += lineHeight;
+            }
+
+            if (card.effect.isRare()) {
+                g.drawString("Rare", x + (int)((double) currentWidth / 2 - 20 * scaleFactor), y + (int)(currentHeight - 20 * scaleFactor));
             }
         }
     }

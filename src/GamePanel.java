@@ -20,6 +20,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener, MouseLis
         setBackground(Color.BLACK);
 
         setFocusable(true);
+        requestFocusInWindow();
         addKeyListener(input);
         addMouseListener(input);
 
@@ -28,24 +29,35 @@ public class GamePanel extends JPanel implements Runnable, KeyListener, MouseLis
 
         game.init();
 
-        gameThread = new Thread(this);
-        gameThread.start();
+        // removed because Input was not working correctly...
+        // gameThread = new Thread(this);
+        // gameThread.start();
+
+        new Timer(16, e -> {
+            game.update(1.0 / 60.0);
+            repaint();
+            Input.update();
+        }).start();
     }
 
     @Override
     public void run() {
         long lastTime = System.nanoTime();
 
-        while(is_running) {
+        while (is_running) {
+
             long now = System.nanoTime();
 
             double delta = (now - lastTime) / 1_000_000_000.0;
-
             lastTime = now;
 
             update(delta);
 
             repaint();
+            if (Input.isKeyJustPressed(KeyEvent.VK_ESCAPE)) {
+                System.out.println("ESC " + delta);
+            }
+            Input.update();
 
             try {
                 Thread.sleep(2);

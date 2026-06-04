@@ -26,7 +26,7 @@ public class BaseProjectile extends Entity {
         vy = dirY * _speed;
 
         baseStats = _baseStats;
-        health += baseStats.projectileExtraHealth;
+        health += baseStats.projectileHealthExtra;
 
         try {
             projectileSprite = ImageIO.read(new File("assets/projectile.png"));

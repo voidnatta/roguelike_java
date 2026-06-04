@@ -8,6 +8,9 @@ import java.io.IOException;
 
 public class Player extends Entity {
     double speed = 100;
+    int health = 100;
+
+    public int maxHealth = 100;
 
     double velocityY = 0;
     double gravity = 500;
@@ -20,8 +23,8 @@ public class Player extends Entity {
     BufferedImage playerHitSprite;
 
     double shootTimer = 0;
-    double shootRate = 0.1;
-    double hitTimer = 0.0;
+    double shootRate = 1.2;
+    double hitTimer = -1.0;
 
     BaseStats baseStats = new BaseStats();
 
@@ -44,24 +47,35 @@ public class Player extends Entity {
 
     @Override
     void update(double delta) {
-        if (!isAlive()) return;
+        if (isAlive()) {
+            double axisX = 0;
 
-        double axisX = 0;
+            if (Input.isDown(KeyEvent.VK_A)) axisX -= 1;
+            if (Input.isDown(KeyEvent.VK_D)) axisX += 1;
 
-        if (Input.isDown(KeyEvent.VK_A)) axisX -= 1;
-        if (Input.isDown(KeyEvent.VK_D)) axisX += 1;
+            x += axisX * speed * delta;
 
-        x += axisX * speed * delta;
+            if (Input.isDown(KeyEvent.VK_SPACE) && canJump()) {
+                velocityY = jumpForce;
+                SoundManager.play("jump");
+            }
+
+            shootTimer -= delta;
+
+            if (Input.isMouseDown(MouseEvent.BUTTON1) && shootTimer <= 0 && game.canShoot()) {
+                spawnProjectile();
+                shootTimer = shootRate * baseStats.playerFireRateMultiplier;
+
+                SoundManager.play("laserShoot");
+            }
+
+            hitTimer -= delta;
+        }
 
         velocityY -= gravity * delta;
 
         if (velocityY <= -maxFallSpeed) {
             velocityY = -maxFallSpeed;
-        }
-
-        if (Input.isDown(KeyEvent.VK_SPACE) && canJump()) {
-            velocityY = jumpForce;
-            SoundManager.play("jump");
         }
 
         double currentGravity = gravity;
@@ -73,8 +87,8 @@ public class Player extends Entity {
         velocityY -= currentGravity * delta;
         y -= velocityY * delta;
 
-        if (y >= GameConfig.SCREEN_HEIGHT - 36) {
-            y = GameConfig.SCREEN_HEIGHT - 36;
+        if (y >= GameConfig.SCREEN_HEIGHT - 37) {
+            y = GameConfig.SCREEN_HEIGHT - 37;
         }
 
         if (x <= 0) {
@@ -84,17 +98,6 @@ public class Player extends Entity {
         if (x >= GameConfig.SCREEN_WIDTH - width) {
             x = GameConfig.SCREEN_WIDTH - width;
         }
-
-        shootTimer -= delta;
-
-        if (Input.isMouseDown(MouseEvent.BUTTON1) && shootTimer <= 0) {
-            spawnProjectile();
-            shootTimer = shootRate;
-
-            SoundManager.play("laserShoot");
-        }
-
-        hitTimer -= delta;
     }
 
     void spawnProjectile() {
@@ -113,11 +116,25 @@ public class Player extends Entity {
     }
 
     public void applyDamage(Double amount) {
-        game.playerHealth -= amount;
-        if (game.playerHealth <= 0) {
+        health -= amount;
+        if (health <= 0) {
             //destroyed = true;
             IO.println("END OF GAME!");
         }
+
+        TextFalling textFalling = new TextFalling(game, 0.6, "-" + String.format("%.2f", amount));
+        textFalling.x = 50;
+        textFalling.y = 19;
+
+        game.addEntity(textFalling);
+    }
+
+    public void tryAddHealth(int amount) {
+        health = Math.min(health + amount, maxHealth);
+    }
+
+    public void addMaxHealth(int amount) {
+        maxHealth += amount;
     }
 
     boolean canJump() {
@@ -140,7 +157,7 @@ public class Player extends Entity {
     }
 
     boolean isAlive() {
-        return game.playerHealth > 0;
+        return health > 0;
     }
 
     @Override
