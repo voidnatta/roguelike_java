@@ -1,6 +1,6 @@
 public class BaseStats {
     double damageMultiplier = 1.0;
-    double projectileHealthExtra = 1.0;
+    double projectileHealthExtra = 0.0;
     double projectileSpeedMultiplier = 1.0;
     double playerFireRateMultiplier = 1.0;
 

@@ -7,23 +7,25 @@ import java.io.File;
 import java.io.IOException;
 
 public class Player extends Entity {
-    double speed = 100;
+    double speed = 250;
     int health = 100;
 
     public int maxHealth = 100;
 
     double velocityY = 0;
-    double gravity = 500;
-    double maxFallSpeed = 600;
-    double jumpForce = 300;
-    double fallGravityMultiplier = 2;
+    double velocityX = 0;
+    double gravity = 1400;
+    double maxFallSpeed = 900;
+    double jumpForce = 400;
+    double fallGravityMultiplier = 4;
+    double jumpHoldGravityMultiplier = 1.1;
 
     BufferedImage playerSprite;
     BufferedImage playerDeadSprite;
     BufferedImage playerHitSprite;
 
     double shootTimer = 0;
-    double shootRate = 1.2;
+    double shootRate = 0.8;
     double hitTimer = -1.0;
 
     BaseStats baseStats = new BaseStats();
@@ -53,9 +55,10 @@ public class Player extends Entity {
             if (Input.isDown(KeyEvent.VK_A)) axisX -= 1;
             if (Input.isDown(KeyEvent.VK_D)) axisX += 1;
 
-            x += axisX * speed * delta;
+            double moveVelocityX = axisX * speed;
+            velocityX += (moveVelocityX - velocityX) * 22 * delta;
 
-            if (Input.isDown(KeyEvent.VK_SPACE) && canJump()) {
+            if (Input.isKeyJustPressed(KeyEvent.VK_SPACE) && canJump()) {
                 velocityY = jumpForce;
                 SoundManager.play("jump");
             }
@@ -72,7 +75,6 @@ public class Player extends Entity {
             hitTimer -= delta;
         }
 
-        velocityY -= gravity * delta;
 
         if (velocityY <= -maxFallSpeed) {
             velocityY = -maxFallSpeed;
@@ -80,15 +82,29 @@ public class Player extends Entity {
 
         double currentGravity = gravity;
 
-        if (velocityY < 0) {
+        if (velocityY > 0) {
+
+            if (Input.isDown(KeyEvent.VK_SPACE)) {
+                currentGravity *= jumpHoldGravityMultiplier;
+            } else {
+                currentGravity *= 2.5;
+            }
+
+        } else if (velocityY < 0) {
             currentGravity *= fallGravityMultiplier;
         }
 
         velocityY -= currentGravity * delta;
+
         y -= velocityY * delta;
+        x += velocityX * delta;
 
         if (y >= GameConfig.SCREEN_HEIGHT - 37) {
             y = GameConfig.SCREEN_HEIGHT - 37;
+
+            if (velocityY < 0) {
+                velocityY = 0;
+            }
         }
 
         if (x <= 0) {
@@ -129,6 +145,11 @@ public class Player extends Entity {
         game.addEntity(textFalling);
     }
 
+    public void applyKnockback(double amountX, double amountY) {
+        velocityX += amountX;
+        velocityY += amountY;
+    }
+
     public void tryAddHealth(int amount) {
         health = Math.min(health + amount, maxHealth);
     }
@@ -162,7 +183,7 @@ public class Player extends Entity {
 
     @Override
     public void hit(Entity other) {
-        if (other instanceof EnemyProjectile _p) {
+        if (other instanceof EnemyProjectile _p || other instanceof Enemy enemy) {
             gotHit = true;
             hitTimer = 0.2;
         }

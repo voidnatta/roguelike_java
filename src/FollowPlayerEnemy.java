@@ -1,25 +1,11 @@
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
+        import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
-public class Enemy extends Entity {
-    double health = 3;
-
-    double shootTimer = 0;
-    double shootRate = 2.5;
-
-    double bleedingInterval = 1;
-    double bleedingTimer = 0;
-
-    boolean bleeding = false;
-    int bleedingDamage = 0;
-
-    BufferedImage enemySprite;
-    BufferedImage enemySprite2;
-
+public class FollowPlayerEnemy extends Enemy {
     double randomXOffset;
 
     double velX = 0;
@@ -29,21 +15,21 @@ public class Enemy extends Entity {
     double acceleration = 100;
     double friction = 3;
 
-    Enemy(Game _game) {
+    FollowPlayerEnemy(Game _game) {
         super(_game);
 
         width = 16;
         height = 16;
 
-        Random random = new Random();
+        health = 3;
 
+        Random random = new Random();
         randomXOffset = random.nextInt(-2, 2);
 
         bleedingTimer = bleedingInterval;
 
         try {
-            enemySprite = ImageIO.read(new File("assets/enemy_1.png"));
-            enemySprite2 = ImageIO.read(new File("assets/enemy_1_left.png"));
+            enemySprite = ImageIO.read(new File("assets/enemy_2.png"));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -80,9 +66,7 @@ public class Enemy extends Entity {
 
     @Override
     void update(double delta) {
-
         if (game.player != null) {
-
             double targetX = game.player.x + randomXOffset;
             double targetY = game.player.y - randomXOffset;
 
@@ -118,18 +102,6 @@ public class Enemy extends Entity {
 
             x += velX * delta;
             y += velY * delta;
-
-            if (y > (GameConfig.SCREEN_HEIGHT) / 2.0) {
-                y = (GameConfig.SCREEN_HEIGHT) / 2.0;
-                velY = 0;
-            }
-        }
-
-        shootTimer -= delta;
-
-        if (shootTimer <= 0 && game.isPlayerAlive()) {
-            spawnProjectile();
-            shootTimer = shootRate;
         }
 
         if (bleeding) {
@@ -142,43 +114,34 @@ public class Enemy extends Entity {
         }
     }
 
-    void spawnProjectile() {
-        double startX = x;
-        double startY = y;
-
-        double deltaX = game.player.x - startX;
-        double deltaY = game.player.y - startY;
-
-        double angle = Math.atan2(deltaY, deltaX);
-
-        double velX = Math.cos(angle);
-        double velY = Math.sin(angle);
-
-        game.addEntity(
-                new EnemyProjectile(
-                        game,
-                        startX,
-                        startY,
-                        velX,
-                        velY,
-                        new BaseStats()
-                )
-        );
-    }
-
     @Override
     void render(Graphics g) {
-        double difference = Math.signum(game.player.x - x);
-
-        BufferedImage currentSprite =
-                (difference >= 0)
-                        ? enemySprite
-                        : enemySprite2;
+        BufferedImage currentSprite = enemySprite;
 
         g.drawImage(currentSprite, (int) x, (int) y, null);
     }
 
     @Override
     public void hit(Entity other) {
+        if (other instanceof Player player) {
+            player.applyDamage(5.0);
+
+            double dx = player.x - x;
+            double dy = player.y - y;
+
+            double len = Math.sqrt(dx * dx + dy * dy);
+
+            player.applyKnockback(
+                    dx / len * 450,
+                    150
+            );
+
+            SoundManager.play("hitHurt");
+
+            if (health <= 0) {
+                destroyed = true;
+                game.enemiesKilled++;
+            }
+        }
     }
 }

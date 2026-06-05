@@ -26,7 +26,6 @@ public class BaseProjectile extends Entity {
         vy = dirY * _speed;
 
         baseStats = _baseStats;
-        health += baseStats.projectileHealthExtra;
 
         try {
             projectileSprite = ImageIO.read(new File("assets/projectile.png"));
@@ -44,10 +43,6 @@ public class BaseProjectile extends Entity {
         y += vy * delta;
 
         if (x < -width || x > GameConfig.SCREEN_WIDTH || y < -height || y > GameConfig.SCREEN_HEIGHT) {
-            destroyed = true;
-        }
-
-        if (health <= 0) {
             destroyed = true;
         }
     }

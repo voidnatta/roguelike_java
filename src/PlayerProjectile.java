@@ -1,6 +1,8 @@
 public class PlayerProjectile extends BaseProjectile {
     public PlayerProjectile(Game _game, double x, double y, double dirX, double dirY, BaseStats _baseStats) {
-        super(_game, x, y, dirX, dirY, _baseStats, 100 * _baseStats.projectileSpeedMultiplier);
+        super(_game, x, y, dirX, dirY, _baseStats, 130 * _baseStats.projectileSpeedMultiplier);
+
+        health += baseStats.projectileHealthExtra;
     }
 
     @Override
@@ -17,6 +19,8 @@ public class PlayerProjectile extends BaseProjectile {
             if (baseStats.bleedProjectile) {
                 enemy.bleeding = true;
                 enemy.bleedingDamage++;
+
+                IO.println("CUUU!!! " + enemy.health);
             }
 
             enemy.applyDamage(damageApplied);

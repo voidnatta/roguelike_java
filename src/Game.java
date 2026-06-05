@@ -21,7 +21,7 @@ public class Game {
     public int enemiesSpawned;
     public int enemiesKilled;
 
-    GameState gameState = GameState.LEVEL_UP;
+    GameState gameState = GameState.GAMEPLAY;
     GameState lastState = GameState.GAMEPLAY;
 
     boolean isPlayerAlive() {
@@ -56,30 +56,35 @@ public class Game {
         addEntity(player);
         addEntity(ground);
 
-        cardPool.add(new Card("Furious", "+20% damage",
-                new DamageEffect(false, 1.2)));
+        cardPool.add(new Card("Furious", "+15% damage",
+                new DamageEffect(false, 1.15)));
         cardPool.add(new Card("Resistance", "+1 Projectile\nHP",
                 new ProjectHealthEffect(false, 1)));
-        cardPool.add(new Card("I'm Late", "+5% Projectile\nSpeed",
-                new SpeedEffect(false, 1.05)));
-        cardPool.add(new Card("Berserk", "+50% damage",
-                new DamageEffect(true, 1.5)));
-        cardPool.add(new Card("I'm Too Late", "+15% Projectile\nSpeed",
-                new SpeedEffect(true, 1.15)));
-        cardPool.add(new Card("Save me", "25% of Max HP",
-                new HealthEffect(false, (double) player.maxHealth / 1.25)));
-        cardPool.add(new Card("Save me+", "+50% of Max HP",
-                new HealthEffect(true, (double) player.maxHealth / 2)));
-        cardPool.add(new Card("Stronger", "+10 Max HP",
+        cardPool.add(new Card("I'm Late", "+10% Projectile\nSpeed",
+                new SpeedEffect(false, 1.10)));
+        cardPool.add(new Card("Berserk", "+35% damage",
+                new DamageEffect(true, 1.35)));
+        cardPool.add(new Card("I'm Too Late", "+25% Projectile\nSpeed",
+                new SpeedEffect(true, 1.25)));
+        cardPool.add(new Card("Hope", "+50 HP",
+                new HealthEffect(false, 50)));
+        cardPool.add(new Card("Hope+", "+100 HP",
+                new HealthEffect(false, 100)));
+        cardPool.add(new Card("Save me", "+25% HP of Max \nHP",
+                new MultiplyHealthEffect(false, 0.25)));
+        cardPool.add(new Card("Save me+", "+50% HP of Max \nHP",
+                new MultiplyHealthEffect(true, 0.50)));
+        cardPool.add(new Card("Stronger", "+25 Max HP",
                 new MaxHealthEffect(false, 25)));
-        cardPool.add(new Card("Stronger+", "+25 Max HP",
+        cardPool.add(new Card("Stronger+", "+50 Max HP",
                 new MaxHealthEffect(true, 50)));
-        cardPool.add(new Card("Pull the trigger", "+15% Fire rate",
-                new FasterShooterEffect(false, 1-0.15)));
-        cardPool.add(new Card("Pull the trigger+", "+25% Fire rate",
-                new FasterShooterEffect(true, 1-0.25)));
+        cardPool.add(new Card("Pull the trigger", "+10% Fire rate",
+                new FasterShooterEffect(false, 1-0.10)));
+        cardPool.add(new Card("Pull the trigger+", "+20% Fire rate",
+                new FasterShooterEffect(true, 1-0.20)));
         cardPool.add(new Card("Bleeding", "Enemy gets\n+1 damage \nevery second.\n(Can stack)",
                 new BleedEffect(false)));
+        cardPool.get(13).apply(player);
 
         generateLevelUpCards();
     }
@@ -189,14 +194,22 @@ public class Game {
             if (spawnTimer <= 0 && enemiesSpawned < enemiesToSpawn) {
                 spawnTimer = spawnInterval;
 
-                Random random = new Random();
-                Enemy new_enemy = new Enemy(this);
+                int roll = random.nextInt(100);
 
-                new_enemy.x = random.nextInt(GameConfig.SCREEN_HEIGHT);
-                new_enemy.y = -20;
+                Enemy newEnemy;
 
-                entities.add(new_enemy);
+                if (roll < 80 || currentWave <= 3) {
+                    newEnemy = new Enemy(this);
+                } else if (roll < 85) {
+                    newEnemy = new FollowPlayerEnemy(this);
+                } else {
+                    newEnemy = new EnemyNPC(this);
+                }
 
+                newEnemy.x = random.nextInt(GameConfig.SCREEN_WIDTH - newEnemy.width);
+                newEnemy.y = -20;
+
+                entities.add(newEnemy);
                 enemiesSpawned++;
             }
 
@@ -284,7 +297,13 @@ public class Game {
     void startWave(int wave) {
         currentWave = wave;
 
-        enemiesToSpawn = (int)(2 * Math.pow(1.5, wave - 1));
+        if (wave <= 15) { // Easy
+            enemiesToSpawn = 2 + wave;
+        } else if (wave <= 45) { // Medium
+            enemiesToSpawn = (int)(17 * Math.pow(1.05, wave - 15));
+        } else { // Hard
+            enemiesToSpawn = (int)(73 * Math.pow(1.07, wave - 45));
+        }
 
         enemiesSpawned = 0;
         enemiesKilled = 0;
@@ -293,8 +312,8 @@ public class Game {
 
         // Spawn rate increases gradually
         spawnInterval = Math.max(
-                0.15,
-                Math.pow(0.96, wave)
+                0.17,
+                Math.pow(0.86, wave)
         );
     }
 

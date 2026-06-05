@@ -1,6 +1,6 @@
 public class EnemyProjectile extends BaseProjectile {
     public EnemyProjectile(Game _game, double x, double y, double dirX, double dirY, BaseStats _baseStats) {
-        super(_game, x, y, dirX, dirY, _baseStats, 100);
+        super(_game, x, y, dirX, dirY, _baseStats, 75);
     }
 
     @Override
@@ -10,6 +10,10 @@ public class EnemyProjectile extends BaseProjectile {
             player.applyDamage(baseDamage * baseStats.damageMultiplier);
 
             SoundManager.play("hitHurt2");
+
+            if (health <= 0) {
+                destroyed = true;
+            }
         }
 
         if (other instanceof PlayerProjectile projectile) {
@@ -17,6 +21,10 @@ public class EnemyProjectile extends BaseProjectile {
             projectile.health--;
 
             SoundManager.play("hitHurt");
+
+            if (health <= 0) {
+                destroyed = true;
+            }
         }
 
         if (other instanceof Ground ground) {
