@@ -9,7 +9,7 @@ public class SpeedEffect implements CardEffect {
 
     @Override
     public void apply(Player player) {
-        player.baseStats.projectileSpeedMultiplier *= multiplier;
+        player.game.baseStats.projectileSpeedMultiplier *= multiplier;
     }
 
     @Override

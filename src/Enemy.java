@@ -80,7 +80,6 @@ public class Enemy extends Entity {
 
     @Override
     void update(double delta) {
-
         if (game.player != null) {
 
             double targetX = game.player.x + randomXOffset;
@@ -161,7 +160,7 @@ public class Enemy extends Entity {
                         startY,
                         velX,
                         velY,
-                        new BaseStats()
+                        game.baseStats
                 )
         );
     }

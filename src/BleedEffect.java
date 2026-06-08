@@ -7,7 +7,7 @@ public class BleedEffect implements CardEffect {
 
     @Override
     public void apply(Player player) {
-        player.baseStats.bleedProjectile = true;
+        player.game.baseStats.bleedProjectile = true;
     }
 
     @Override

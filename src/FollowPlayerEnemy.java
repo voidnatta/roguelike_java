@@ -11,8 +11,8 @@ public class FollowPlayerEnemy extends Enemy {
     double velX = 0;
     double velY = 0;
 
-    double maxSpeed = 120;
-    double acceleration = 100;
+    double maxSpeed = 90;
+    double acceleration = 130;
     double friction = 3;
 
     FollowPlayerEnemy(Game _game) {
@@ -33,35 +33,6 @@ public class FollowPlayerEnemy extends Enemy {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public void applyDamage(Double amount) {
-        health -= amount;
-
-        if (health <= 0) {
-            game.addEntity(new AnimationEntity(game, x, y, Assets.EXPLOSION));
-
-            destroyed = true;
-            game.enemiesKilled++;
-
-            Random random = new Random();
-
-            if (random.nextInt(0, 100) < 50) {
-                SoundManager.play("explosion");
-            } else {
-                SoundManager.play("explosionPitched");
-            }
-        }
-
-        TextFalling textFalling =
-                new TextFalling(game, 0.6, "-" + String.format("%.2f", amount));
-
-        textFalling.x = x;
-        textFalling.y = y;
-
-        game.addEntity(textFalling);
-
-        SoundManager.play("hitHurt");
     }
 
     @Override

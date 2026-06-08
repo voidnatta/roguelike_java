@@ -9,7 +9,7 @@ public class ProjectHealthEffect implements CardEffect {
 
     @Override
     public void apply(Player player) {
-        player.baseStats.projectileHealthExtra += healthAmount;
+        player.game.baseStats.projectileHealthExtra += healthAmount;
     }
 
     @Override

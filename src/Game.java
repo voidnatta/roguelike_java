@@ -33,6 +33,8 @@ public class Game {
 
     private final Random random = new Random();
 
+    BaseStats baseStats = new BaseStats();
+
     ArrayList<Card> cardPool = new ArrayList<>();
     ArrayList<Card> cards = new ArrayList<>();
 
@@ -48,9 +50,9 @@ public class Game {
 
     void init() {
         startWave(1);
-        SoundManager.loop("music_2");
+        SoundManager.loop("music_3");
 
-        player.x = (double)GameConfig.SCREEN_WIDTH / 2 - 25;
+        player.x = (double)GameConfig.SCREEN_WIDTH / 2 - 16;
         player.y = GameConfig.SCREEN_HEIGHT - 37;;
 
         addEntity(player);
@@ -83,8 +85,7 @@ public class Game {
         cardPool.add(new Card("Pull the trigger+", "+20% Fire rate",
                 new FasterShooterEffect(true, 1-0.20)));
         cardPool.add(new Card("Bleeding", "Enemy gets\n+1 damage \nevery second.\n(Can stack)",
-                new BleedEffect(false)));
-        cardPool.get(13).apply(player);
+                new BleedEffect(true)));
 
         generateLevelUpCards();
     }
@@ -232,6 +233,9 @@ public class Game {
                     Entity a = entities.get(i);
                     Entity b = entities.get(j);
 
+                    if (a instanceof UI) continue;
+                    if (b instanceof UI) continue;
+
                     if (a.intersects(b)) {
                         a.hit(b);
                         b.hit(a);
@@ -253,6 +257,11 @@ public class Game {
         for (int i = 0; i < entities.size(); i++) {
             Entity entity = entities.get(i);
             entity.render(bufferG);
+
+            if (entity instanceof UI) continue;
+
+//            bufferG.setColor(new Color(255, 0, 0));
+//            bufferG.drawRect((int)entity.x, (int)entity.y, entity.width, entity.height);
         }
 
         bufferG.dispose();
@@ -297,14 +306,6 @@ public class Game {
     void startWave(int wave) {
         currentWave = wave;
 
-        if (wave <= 15) { // Easy
-            enemiesToSpawn = 2 + wave;
-        } else if (wave <= 45) { // Medium
-            enemiesToSpawn = (int)(17 * Math.pow(1.05, wave - 15));
-        } else { // Hard
-            enemiesToSpawn = (int)(73 * Math.pow(1.07, wave - 45));
-        }
-
         enemiesSpawned = 0;
         enemiesKilled = 0;
 
@@ -315,6 +316,23 @@ public class Game {
                 0.17,
                 Math.pow(0.86, wave)
         );
+
+        // add new boss each 5 waves
+        if (wave % 5 == 0) {
+            addEntity(new Boss(this));
+            enemiesToSpawn = 1;
+            enemiesSpawned = 1;
+
+            return;
+        }
+
+        if (wave <= 15) { // Easy
+            enemiesToSpawn = 2 + wave;
+        } else if (wave <= 45) { // Medium
+            enemiesToSpawn = (int)(17 * Math.pow(1.05, wave - 15));
+        } else { // Hard
+            enemiesToSpawn = (int)(73 * Math.pow(1.07, wave - 45));
+        }
     }
 
     public boolean canShoot() {

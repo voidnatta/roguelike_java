@@ -9,7 +9,7 @@ public class DamageEffect implements CardEffect {
 
     @Override
     public void apply(Player player) {
-        player.baseStats.damageMultiplier *= multiplier;
+        player.game.baseStats.damageMultiplier *= multiplier;
     }
 
     @Override

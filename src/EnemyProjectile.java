@@ -18,7 +18,7 @@ public class EnemyProjectile extends BaseProjectile {
 
         if (other instanceof PlayerProjectile projectile) {
             health--;
-            projectile.health--;
+            projectile.applyDamage(1);
 
             SoundManager.play("hitHurt");
 

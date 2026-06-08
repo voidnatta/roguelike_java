@@ -9,7 +9,7 @@ import java.util.Random;
 public class EnemyNPC extends Enemy {
     double cooldownTimer = 0;
 
-    double maxSpeed = 120;
+    double maxSpeed = 100;
     double acceleration = 100;
     double friction = 3;
 

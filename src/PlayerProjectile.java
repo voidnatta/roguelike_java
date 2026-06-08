@@ -5,6 +5,14 @@ public class PlayerProjectile extends BaseProjectile {
         health += baseStats.projectileHealthExtra;
     }
 
+    public void applyDamage(double amount) {
+        health -= amount;
+
+        if (health <= 0) {
+            destroyed = true;
+        }
+    }
+
     @Override
     public void hit(Entity other) {
         if (other instanceof Enemy enemy) {
@@ -19,8 +27,6 @@ public class PlayerProjectile extends BaseProjectile {
             if (baseStats.bleedProjectile) {
                 enemy.bleeding = true;
                 enemy.bleedingDamage++;
-
-                IO.println("CUUU!!! " + enemy.health);
             }
 
             enemy.applyDamage(damageApplied);
@@ -31,6 +37,32 @@ public class PlayerProjectile extends BaseProjectile {
             textFalling.y = y;
 
             game.addEntity(textFalling);
+        }
+
+        if (other instanceof Boss boss) {
+            health--;
+
+            if (health <= 0) {
+                destroyed = true;
+            }
+
+            double damageApplied = baseDamage * baseStats.damageMultiplier;
+
+            if (baseStats.bleedProjectile) {
+                boss.bleeding = true;
+                boss.bleedingDamage++;
+            }
+
+            boolean success = boss.applyDamage(damageApplied);
+            SoundManager.play("hitHurt3");
+
+            if (success) {
+                TextFalling textFalling = new TextFalling(game, 0.6, "-" + String.format("%.2f", damageApplied));
+                textFalling.x = x;
+                textFalling.y = y;
+
+                game.addEntity(textFalling);
+            }
         }
 
         if (other instanceof Ground ground) {

@@ -25,10 +25,11 @@ public class Player extends Entity {
     BufferedImage playerHitSprite;
 
     double shootTimer = 0;
-    double shootRate = 0.8;
+    double shootRate = 0.8;//0.8
     double hitTimer = -1.0;
 
-    BaseStats baseStats = new BaseStats();
+    final int widthOffset = 4;
+    final int heightOffset = 4;
 
     boolean gotHit;
 
@@ -67,7 +68,7 @@ public class Player extends Entity {
 
             if (Input.isMouseDown(MouseEvent.BUTTON1) && shootTimer <= 0 && game.canShoot()) {
                 spawnProjectile();
-                shootTimer = shootRate * baseStats.playerFireRateMultiplier;
+                shootTimer = shootRate * game.baseStats.playerFireRateMultiplier;
 
                 SoundManager.play("laserShoot");
             }
@@ -128,7 +129,7 @@ public class Player extends Entity {
         double velX = Math.cos(angle);
         double velY = Math.sin(angle);
 
-        game.addEntity(new PlayerProjectile(game, startX, startY, velX, velY, baseStats));
+        game.addEntity(new PlayerProjectile(game, startX, startY, velX, velY, game.baseStats));
     }
 
     public void applyDamage(Double amount) {
@@ -173,7 +174,7 @@ public class Player extends Entity {
                 g.drawImage(playerHitSprite, (int)x, (int)y, width, height, null);
             }
         } else {
-            g.drawImage(playerDeadSprite, (int)x, (int)y, width, height, null);
+            g.drawImage(playerDeadSprite, (int)x, (int)y, width + widthOffset, height + heightOffset, null);
         }
     }
 

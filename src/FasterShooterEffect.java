@@ -9,7 +9,7 @@ public class FasterShooterEffect implements CardEffect {
 
     @Override
     public void apply(Player player) {
-        player.baseStats.playerFireRateMultiplier *= amount;
+        player.game.baseStats.playerFireRateMultiplier *= amount;
     }
 
     @Override
