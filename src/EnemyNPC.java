@@ -23,7 +23,7 @@ public class EnemyNPC extends Enemy {
 
         width = 16;
         height = 16;
-        health = 5;
+        health = 2;
 
         try {
             enemySprite = ImageIO.read(new File("assets/enemy_3.png"));

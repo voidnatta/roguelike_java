@@ -7,7 +7,7 @@ public class EnemyProjectile extends BaseProjectile {
     public void hit(Entity other) {
         if (other instanceof Player player) {
             health--;
-            player.applyDamage(baseDamage * baseStats.damageMultiplier);
+            player.applyDamage(baseDamage);
 
             SoundManager.play("hitHurt2");
 

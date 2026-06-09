@@ -14,13 +14,20 @@ enum BossState {
 
 public class Boss extends Entity {
     BossState state = BossState.IDLE;
-    double stateTimer = 5.0;
+    double stateTimer = 8.0;
     int attackPhase = 0;
 
-    double health = 100.0;
+    double health = 150.0;
 
-    double shootTimer = 0;
-    double shootRate = 2.5;
+    double shootDuration = .2;
+    double shootCooldown = .3;
+
+    double shootDurationTimer = shootDuration;
+    double shootCooldownTimer = 0;
+
+    boolean shooting = true;
+
+    double enemiesSpawned = 0;
 
     double bleedingInterval = 1;
     double bleedingTimer = 0;
@@ -28,7 +35,17 @@ public class Boss extends Entity {
     boolean bleeding = false;
     int bleedingDamage = 0;
 
-    BufferedImage sprite;
+    double thornSpawnTimer = 0;
+    double thornSpawnRate = 0.2;
+
+    int thornIndex = 0;
+    int currentThornPhase = 0;
+
+    BufferedImage currentSprite;
+
+    BufferedImage bossIdle;
+    BufferedImage bossAngry;
+    BufferedImage bossClosehands;
 
     double velX = 0;
     double velY = 0;
@@ -43,13 +60,18 @@ public class Boss extends Entity {
     public Boss(Game _game) {
         super(_game);
 
-        width = 32;
-        height = 32;
+        width = 48;
+        height = 48;
 
         bleedingTimer = bleedingInterval;
+        shootCooldownTimer = shootCooldown;
 
         try {
-            sprite = ImageIO.read(new File("assets/boss.png"));
+            bossIdle = ImageIO.read(new File("assets/boss.png"));
+            bossAngry = ImageIO.read(new File("assets/boss_angry.png"));
+            bossClosehands = ImageIO.read(new File("assets/boss_closehands.png"));
+
+            currentSprite = bossIdle;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -74,31 +96,108 @@ public class Boss extends Entity {
 
         switch (state) {
             case IDLE -> {
+                currentSprite = bossIdle;
+
                 moveToCenter(delta);
-                animateOffsetY(delta);
+                animateOffsetY(delta, 10, 30, 2);
 
                 if(stateTimer <= 0) {
                     if(attackPhase == 0) {
                         attackPhase = 1;
-                        changeState(BossState.CLOSE_HANDS, 10.0);
+                        changeState(BossState.CLOSE_HANDS, 2.0);
+                        enemiesSpawned = 0;
                     } else {
                         attackPhase = 0;
-                        changeState(BossState.SHOOT_PATTERN, 5.0);
+                        changeState(BossState.SHOOT_PATTERN, 3.0);
                     }
                 }
             }
+
             case CLOSE_HANDS -> {
-                animateOffsetY(delta);
+                currentSprite = bossClosehands;
+                animateOffsetY(delta, 5, 10, 1);
+
+                while (enemiesSpawned < 4) {
+                    enemiesSpawned++;
+                    game.spawnRandomEnemy();
+                }
 
                 if(stateTimer <= 0) {
-                    changeState(BossState.THORNS, 3.0);
+                    changeState(BossState.THORNS, 5.0);
                 }
             }
-            case THORNS, SHOOT_PATTERN -> {
-                animateOffsetY(delta);
+
+            case THORNS -> {
+                currentSprite = bossAngry;
+                animateOffsetY(delta, 10, 15, 5);
+                y = moveTowards(y, 30, 30 * delta);
+
+                switch (currentThornPhase) {
+                    case 0 -> {
+                        x = moveTowards(x, 0, 50 * delta);
+
+                        if (x < 1) {
+                            currentThornPhase = 1;
+                        }
+                    }
+                    case 1 -> {
+                        x = moveTowards(x, GameConfig.SCREEN_WIDTH - width, 50.0 * delta);
+
+                        thornSpawnTimer -= delta;
+
+                        if (thornSpawnTimer <= 0 &&
+                                thornIndex < (GameConfig.SCREEN_WIDTH - 32) / 16) {
+
+                            Thorn t = new Thorn(game, GameConfig.SCREEN_HEIGHT - 37);
+                            t.x = 16.0 * thornIndex;
+
+                            game.addEntity(t);
+
+                            thornIndex++;
+                            thornSpawnTimer = thornSpawnRate;
+                        }
+
+                        if (x >= GameConfig.SCREEN_WIDTH - width) {
+                            currentThornPhase = 2;
+                        }
+                    }
+                    case 2 -> {
+                        moveToCenter(delta);
+                    }
+                }
+
+                if (thornIndex >= (GameConfig.SCREEN_WIDTH - 32) / 16 &&
+                        stateTimer <= 0) {
+                    currentThornPhase = 0;
+                    changeState(BossState.IDLE, 8.0);
+                }
+            }
+
+            case SHOOT_PATTERN -> {
+                currentSprite = bossAngry;
+
+                moveToCenter(delta);
+                animateOffsetY(delta, 10, 30, 8);
+
+                if (shooting) {
+                    spawnProjectile(x + width * .5 - 8, (y + (height * 0.5) + 20) + drawOffsetY);
+                    shootDurationTimer -= delta;
+
+                    if (shootDurationTimer <= 0) {
+                        shooting = false;
+                        shootDurationTimer = shootCooldown;
+                    }
+                } else {
+                    shootCooldownTimer -= delta;
+
+                    if (shootCooldownTimer <= 0) {
+                        shooting = true;
+                        shootCooldownTimer = shootDuration;
+                    }
+                }
 
                 if(stateTimer <= 0) {
-                    changeState(BossState.IDLE, 4.0);
+                    changeState(BossState.IDLE, 8.0);
                 }
             }
         }
@@ -107,12 +206,17 @@ public class Boss extends Entity {
     private void changeState(BossState newState, double duration) {
         state = newState;
         stateTimer = duration;
+
+        if (state == BossState.THORNS) {
+            thornIndex = 0;
+            thornSpawnTimer = 0;
+        }
     }
 
     private void moveToCenter(double delta) {
         if (game.player != null) {
 
-            double targetX = (GameConfig.SCREEN_WIDTH * 0.5) - width;
+            double targetX = (GameConfig.SCREEN_WIDTH * 0.5) - width * 0.5;
             double targetY = (GameConfig.SCREEN_HEIGHT * 0.5) - 60;
 
             double dx = targetX - x;
@@ -155,16 +259,42 @@ public class Boss extends Entity {
         }
     }
 
-    private void animateOffsetY(double delta) {
+    private void animateOffsetY(double delta, double minY, double maxY, double speed) {
         timer += delta;
-
-        double minY = 10;
-        double maxY = 30;
 
         double amplitude = (maxY - minY) / 2.0;
         double center = (minY - maxY) / 2.0;
 
-        drawOffsetY = (int) (center + Math.sin(timer * 3.0) * amplitude);
+        drawOffsetY = (int) (center + Math.sin(timer * speed) * amplitude);
+    }
+
+    double moveTowards(double current, double target, double maxDelta) {
+        if (Math.abs(target - current) <= maxDelta) {
+            return target;
+        }
+
+        return current + Math.signum(target - current) * maxDelta;
+    }
+
+    void spawnProjectile(double _x, double _y) {
+        double deltaX = game.player.x - _x;
+        double deltaY = game.player.y - _y;
+
+        double angle = Math.atan2(deltaY, deltaX);
+
+        double velX = Math.cos(angle);
+        double velY = Math.sin(angle);
+
+        game.addEntity(
+                new EnemyProjectile(
+                        game,
+                        _x,
+                        _y,
+                        velX,
+                        velY,
+                        game.baseStats
+                )
+        );
     }
 
     public boolean applyDamage(double amount) {
@@ -205,13 +335,13 @@ public class Boss extends Entity {
 
     @Override
     void render(Graphics g) {
-        g.drawImage(sprite, (int) x, (int) y + drawOffsetY, null);
+        g.drawImage(currentSprite, (int) x, (int) y + drawOffsetY, null);
     }
 
     @Override
     public void hit(Entity other) {
         if (other instanceof Player player) {
-            player.applyDamage(5.0);
+            player.applyDamage(2.0);
 
             double dx = player.x - x;
             double dy = player.y - y;
@@ -220,7 +350,7 @@ public class Boss extends Entity {
 
             player.applyKnockback(
                     dx / len * 450,
-                    150
+                    10
             );
 
             SoundManager.play("hitHurt");

@@ -25,7 +25,7 @@ public class Player extends Entity {
     BufferedImage playerHitSprite;
 
     double shootTimer = 0;
-    double shootRate = 0.8;//0.8
+    double shootRate = 0.7; //0.8
     double hitTimer = -1.0;
 
     final int widthOffset = 4;
@@ -184,7 +184,7 @@ public class Player extends Entity {
 
     @Override
     public void hit(Entity other) {
-        if (other instanceof EnemyProjectile _p || other instanceof Enemy enemy) {
+        if (other instanceof EnemyProjectile _p || other instanceof Enemy enemy || other instanceof Thorn t) {
             gotHit = true;
             hitTimer = 0.2;
         }

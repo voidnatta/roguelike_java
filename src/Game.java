@@ -1,7 +1,6 @@
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
-import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Random;
@@ -53,7 +52,7 @@ public class Game {
         SoundManager.loop("music_3");
 
         player.x = (double)GameConfig.SCREEN_WIDTH / 2 - 16;
-        player.y = GameConfig.SCREEN_HEIGHT - 37;;
+        player.y = GameConfig.SCREEN_HEIGHT - 37;
 
         addEntity(player);
         addEntity(ground);
@@ -61,7 +60,7 @@ public class Game {
         cardPool.add(new Card("Furious", "+15% damage",
                 new DamageEffect(false, 1.15)));
         cardPool.add(new Card("Resistance", "+1 Projectile\nHP",
-                new ProjectHealthEffect(false, 1)));
+                new ProjectHealthEffect(true, 1)));
         cardPool.add(new Card("I'm Late", "+10% Projectile\nSpeed",
                 new SpeedEffect(false, 1.10)));
         cardPool.add(new Card("Berserk", "+35% damage",
@@ -85,7 +84,7 @@ public class Game {
         cardPool.add(new Card("Pull the trigger+", "+20% Fire rate",
                 new FasterShooterEffect(true, 1-0.20)));
         cardPool.add(new Card("Bleeding", "Enemy gets\n+1 damage \nevery second.\n(Can stack)",
-                new BleedEffect(true)));
+                new BleedEffect(false)));
 
         generateLevelUpCards();
     }
@@ -192,7 +191,7 @@ public class Game {
 
             spawnTimer -= delta;
 
-            if (spawnTimer <= 0 && enemiesSpawned < enemiesToSpawn) {
+            if (spawnTimer <= 0 && enemiesSpawned < enemiesToSpawn && !isBossRound(currentWave)) {
                 spawnTimer = spawnInterval;
 
                 int roll = random.nextInt(100);
@@ -256,6 +255,8 @@ public class Game {
 
         for (int i = 0; i < entities.size(); i++) {
             Entity entity = entities.get(i);
+
+            if (entity instanceof Ground) continue;
             entity.render(bufferG);
 
             if (entity instanceof UI) continue;
@@ -263,6 +264,8 @@ public class Game {
 //            bufferG.setColor(new Color(255, 0, 0));
 //            bufferG.drawRect((int)entity.x, (int)entity.y, entity.width, entity.height);
         }
+
+        ground.render(bufferG);
 
         bufferG.dispose();
 
@@ -303,6 +306,32 @@ public class Game {
         }
     }
 
+
+    void spawnRandomEnemy() {
+        int roll = random.nextInt(100);
+
+        Enemy newEnemy;
+
+        if (roll < 80 || currentWave <= 3) {
+            newEnemy = new Enemy(this);
+        } else if (roll < 85) {
+            newEnemy = new FollowPlayerEnemy(this);
+        } else {
+            newEnemy = new EnemyNPC(this);
+        }
+
+        newEnemy.x = random.nextInt(GameConfig.SCREEN_WIDTH - newEnemy.width);
+        newEnemy.y = -20;
+
+        entities.add(newEnemy);
+        enemiesSpawned++;
+        enemiesToSpawn++;
+    }
+
+    boolean isBossRound(int wave) {
+        return wave % 5 == 0;
+    }
+
     void startWave(int wave) {
         currentWave = wave;
 
@@ -318,8 +347,12 @@ public class Game {
         );
 
         // add new boss each 5 waves
-        if (wave % 5 == 0) {
-            addEntity(new Boss(this));
+        if (isBossRound(wave)) {
+            var boss = new Boss(this);
+            boss.x = GameConfig.SCREEN_WIDTH * 0.5;
+            boss.y = -48;
+
+            addEntity(boss);
             enemiesToSpawn = 1;
             enemiesSpawned = 1;
 
