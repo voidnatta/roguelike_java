@@ -14,7 +14,7 @@ enum BossState {
 
 public class Boss extends Entity {
     BossState state = BossState.IDLE;
-    double stateTimer = 8.0;
+    double stateTimer = 2.0;
     int attackPhase = 0;
 
     double health = 150.0;
@@ -108,7 +108,7 @@ public class Boss extends Entity {
                         enemiesSpawned = 0;
                     } else {
                         attackPhase = 0;
-                        changeState(BossState.SHOOT_PATTERN, 3.0);
+                        changeState(BossState.SHOOT_PATTERN, 5.0);
                     }
                 }
             }
@@ -297,10 +297,9 @@ public class Boss extends Entity {
         );
     }
 
-    public boolean applyDamage(double amount) {
-        if (state == BossState.CLOSE_HANDS) {
-            IO.println(health);
-            return false;
+    public void applyDamage(double amount) {
+        if (state != BossState.IDLE) {
+            return;
         }
 
         health -= amount;
@@ -318,6 +317,8 @@ public class Boss extends Entity {
             } else {
                 SoundManager.play("explosionPitched");
             }
+
+            game.totalEnemiesKilled++;
         }
 
         TextFalling textFalling =
@@ -330,7 +331,6 @@ public class Boss extends Entity {
 
         SoundManager.play("hitHurt");
 
-        return true;
     }
 
     @Override

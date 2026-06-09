@@ -53,16 +53,16 @@ public class PlayerProjectile extends BaseProjectile {
                 boss.bleedingDamage++;
             }
 
-            boolean success = boss.applyDamage(damageApplied);
+            boss.applyDamage(damageApplied);
             SoundManager.play("hitHurt3");
 
-            if (success) {
-                TextFalling textFalling = new TextFalling(game, 0.6, "-" + String.format("%.2f", damageApplied));
-                textFalling.x = x;
-                textFalling.y = y;
-
-                game.addEntity(textFalling);
-            }
+//            if (success) {
+//                TextFalling textFalling = new TextFalling(game, 0.6, "-" + String.format("%.2f", damageApplied));
+//                textFalling.x = x;
+//                textFalling.y = y;
+//
+//                game.addEntity(textFalling);
+//            }
         }
 
         if (other instanceof Ground ground) {

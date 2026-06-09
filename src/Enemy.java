@@ -65,6 +65,7 @@ public class Enemy extends Entity {
             } else {
                 SoundManager.play("explosionPitched");
             }
+            game.totalEnemiesKilled++;
         }
 
         TextFalling textFalling =

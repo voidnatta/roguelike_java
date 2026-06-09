@@ -8,8 +8,7 @@ import java.io.IOException;
 
 public class Player extends Entity {
     double speed = 250;
-    int health = 100;
-
+    int health = 1;
     public int maxHealth = 100;
 
     double velocityY = 0;
@@ -39,6 +38,8 @@ public class Player extends Entity {
         width = 16;
         height = 16;
 
+
+
         try {
             playerSprite = ImageIO.read(new File("assets/player.png"));
             playerDeadSprite = ImageIO.read(new File("assets/player_dead.png"));
@@ -46,6 +47,15 @@ public class Player extends Entity {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void init() {
+        speed = game.baseStats.playerBaseSpeed;
+        health = game.baseStats.playerBaseHealth;
+        maxHealth = game.baseStats.playerBaseMaxHealth;
+
+        x = (double)GameConfig.SCREEN_WIDTH / 2 - 16;
+        y = GameConfig.SCREEN_HEIGHT - 37;
     }
 
     @Override
@@ -136,7 +146,7 @@ public class Player extends Entity {
         health -= amount;
         if (health <= 0) {
             //destroyed = true;
-            IO.println("END OF GAME!");
+            game.gameState = GameState.GAME_OVER_SCREEN;
         }
 
         TextFalling textFalling = new TextFalling(game, 0.6, "-" + String.format("%.2f", amount));
@@ -144,6 +154,9 @@ public class Player extends Entity {
         textFalling.y = 19;
 
         game.addEntity(textFalling);
+
+        gotHit = true;
+        hitTimer = 0.2;
     }
 
     public void applyKnockback(double amountX, double amountY) {
@@ -182,11 +195,10 @@ public class Player extends Entity {
         return health > 0;
     }
 
-    @Override
-    public void hit(Entity other) {
-        if (other instanceof EnemyProjectile _p || other instanceof Enemy enemy || other instanceof Thorn t) {
-            gotHit = true;
-            hitTimer = 0.2;
-        }
+    void reset() {
+        health = game.baseStats.playerBaseHealth;
     }
+
+    @Override
+    public void hit(Entity other) {}
 }

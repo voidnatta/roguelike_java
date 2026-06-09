@@ -48,6 +48,7 @@ public class EnemyNPC extends Enemy {
             } else {
                 SoundManager.play("explosionPitched");
             }
+            game.totalEnemiesKilled++;
         }
 
         TextFalling textFalling =

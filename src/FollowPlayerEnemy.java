@@ -11,7 +11,7 @@ public class FollowPlayerEnemy extends Enemy {
     double velX = 0;
     double velY = 0;
 
-    double maxSpeed = 90;
+    double maxSpeed = 110;
     double acceleration = 130;
     double friction = 3;
 
@@ -21,7 +21,7 @@ public class FollowPlayerEnemy extends Enemy {
         width = 16;
         height = 16;
 
-        health = 3;
+        health = 6;
 
         Random random = new Random();
         randomXOffset = random.nextInt(-2, 2);
@@ -112,6 +112,7 @@ public class FollowPlayerEnemy extends Enemy {
             if (health <= 0) {
                 destroyed = true;
                 game.enemiesKilled++;
+                game.totalEnemiesKilled++;
             }
         }
     }

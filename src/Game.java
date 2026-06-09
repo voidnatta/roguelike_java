@@ -8,7 +8,9 @@ import java.util.Random;
 enum GameState {
     LEVEL_UP,
     GAMEPLAY,
-    PAUSED
+    PAUSED,
+    START_SCREEN,
+    GAME_OVER_SCREEN
 }
 
 public class Game {
@@ -19,13 +21,10 @@ public class Game {
     public int enemiesToSpawn;
     public int enemiesSpawned;
     public int enemiesKilled;
+    public int totalEnemiesKilled = 0;
 
     GameState gameState = GameState.GAMEPLAY;
     GameState lastState = GameState.GAMEPLAY;
-
-    boolean isPlayerAlive() {
-        return player.health >= 0;
-    }
 
     Player player = new Player(this);
     Ground ground = new Ground(this);
@@ -45,14 +44,15 @@ public class Game {
     boolean canShoot = false;
     double canShootTimer = 0.5;
 
+    double menuTime = 0;
+
     Graphics2D g2;
 
     void init() {
         startWave(1);
         SoundManager.loop("music_3");
 
-        player.x = (double)GameConfig.SCREEN_WIDTH / 2 - 16;
-        player.y = GameConfig.SCREEN_HEIGHT - 37;
+        player.init();
 
         addEntity(player);
         addEntity(ground);
@@ -60,7 +60,7 @@ public class Game {
         cardPool.add(new Card("Furious", "+15% damage",
                 new DamageEffect(false, 1.15)));
         cardPool.add(new Card("Resistance", "+1 Projectile\nHP",
-                new ProjectHealthEffect(true, 1)));
+                new ProjectHealthEffect(false, 1)));
         cardPool.add(new Card("I'm Late", "+10% Projectile\nSpeed",
                 new SpeedEffect(false, 1.10)));
         cardPool.add(new Card("Berserk", "+35% damage",
@@ -84,7 +84,7 @@ public class Game {
         cardPool.add(new Card("Pull the trigger+", "+20% Fire rate",
                 new FasterShooterEffect(true, 1-0.20)));
         cardPool.add(new Card("Bleeding", "Enemy gets\n+1 damage \nevery second.\n(Can stack)",
-                new BleedEffect(false)));
+                new BleedEffect(true)));
 
         generateLevelUpCards();
     }
@@ -98,6 +98,29 @@ public class Game {
     }
 
     void update(double delta) {
+        if (gameState == GameState.GAME_OVER_SCREEN) {
+            menuTime += delta;
+
+            if (Input.isKeyJustPressed(KeyEvent.VK_SPACE)) {
+                resetGame();
+                startWave(1);
+
+                gameState = GameState.GAMEPLAY;
+            }
+
+            return;
+        }
+
+        if (gameState == GameState.START_SCREEN) {
+            menuTime += delta;
+
+            if (Input.isKeyJustPressed(KeyEvent.VK_SPACE)) {
+                gameState = GameState.GAMEPLAY;
+            }
+
+            return;
+        }
+
         if (gameState == GameState.PAUSED) {
             if (Input.isKeyJustPressed(KeyEvent.VK_ESCAPE)) {
                 gameState = lastState;
@@ -297,6 +320,14 @@ public class Game {
 
         drawPlayerUI(g2);
 
+        if (gameState == GameState.START_SCREEN) {
+            drawStartScreenUI(g2);
+        }
+
+        if (gameState == GameState.GAME_OVER_SCREEN) {
+            drawGameOverUI(g2);
+        }
+
         if (gameState == GameState.LEVEL_UP) {
             drawCards(g2);
         }
@@ -306,6 +337,286 @@ public class Game {
         }
     }
 
+    void drawPlayerUI(Graphics g) {
+        g.setColor(new Color(240, 246, 240));
+        Font font = (Assets.pixelFont != null) ? Assets.pixelFont : g.getFont();
+
+        g.setFont(font.deriveFont(Font.PLAIN, 24.0f));
+
+        g.drawString(
+                "WAVE " + currentWave,
+                10,
+                30
+        );
+
+        g.drawString(
+                "HP " + Math.clamp(player.health, 0, player.maxHealth) + "/" + player.maxHealth,
+                10,
+                60
+        );
+
+        g.setColor(new Color(34, 35, 35));
+        g.fillRect(
+                10,
+                70,
+                (int)(((double) player.health / player.maxHealth) * 200.0),
+                20
+        );
+
+        int targetWidth = (int)(((double) player.health / player.maxHealth) * 200.0);
+
+        g.setColor(new Color(240, 246, 240));
+        g.drawRect(
+                10,
+                70,
+                Math.max(targetWidth, 2),
+                20
+        );
+
+        g.drawString(
+                enemiesKilled + "/" + enemiesToSpawn,
+                10,
+                120
+        );
+    }
+
+    void drawCards(Graphics g) {
+        int baseWidth = 85 * 2;
+        int baseHeight = 120 * 2;
+        int spacing = 40;
+
+        int totalWidth = cards.size() * baseWidth + (cards.size() - 1) * spacing;
+
+        int startX = (GameConfig.getRealScreenWidth() - totalWidth) / 2;
+        int baseY = (GameConfig.getRealScreenHeight() - baseHeight) / 2;
+
+        for (int i = 0; i < cards.size(); i++) {
+            Card card = cards.get(i);
+
+            int baseLayoutX = startX + i * (baseWidth + spacing);
+
+            double scaleFactor = 1.0 + (0.15 * card.hoverProgress);
+
+            int currentWidth = (int) (baseWidth * scaleFactor);
+            int currentHeight = (int) (baseHeight * scaleFactor);
+
+            int x = baseLayoutX - (currentWidth - baseWidth) / 2;
+            int y = baseY - (currentHeight - baseHeight) / 2;
+
+            card.bounds.setBounds(x, y, currentWidth, currentHeight);
+
+            g.setColor(new Color(34, 35, 35));
+            g.fillRect(x, y, currentWidth, currentHeight);
+
+            g.setColor(new Color(240, 246, 240));
+            g.drawRect(x, y, currentWidth, currentHeight);
+
+            Font currentFont = g.getFont();
+
+            float fontSize = (float) (18.0f + (3.0f * card.hoverProgress));
+            g.setFont(currentFont.deriveFont(fontSize));
+
+            g.drawString(card.name, x + 5, y + (int)(25 * scaleFactor));
+
+            String[] lines = card.description.split("\n");
+            int lineHeight = g.getFontMetrics().getHeight() - 5;
+            int textY = y + (int)(75 * scaleFactor);
+
+            for (String line : lines) {
+                g.drawString(line, x + 5, textY);
+                textY += lineHeight;
+            }
+
+            if (card.effect.isRare()) {
+                g.drawString("Rare", x + (int)((double) currentWidth / 2 - 20 * scaleFactor), y + (int)(currentHeight - 20 * scaleFactor));
+            }
+        }
+    }
+
+    void drawPauseUI(Graphics g) {
+        g.setColor(new Color(0, 0, 0, 200));
+        g.fillRect(0, 0, GameConfig.SCREEN_WIDTH * GameConfig.SCREEN_SCALE, GameConfig.SCREEN_HEIGHT * GameConfig.SCREEN_SCALE);
+
+        int xOffset = 50;
+        int yOffset = 10;
+
+        g.setColor(new Color(240, 246, 240));
+        g.drawString("PAUSED", GameConfig.SCREEN_WIDTH * GameConfig.SCREEN_SCALE / 2 - xOffset, GameConfig.SCREEN_HEIGHT * GameConfig.SCREEN_SCALE / 2 - yOffset);
+    }
+
+    void drawStartScreenUI(Graphics g) {
+        g.setColor(new Color(0, 0, 0, 200));
+        g.fillRect(
+                0,
+                0,
+                GameConfig.SCREEN_WIDTH * GameConfig.SCREEN_SCALE,
+                GameConfig.SCREEN_HEIGHT * GameConfig.SCREEN_SCALE
+        );
+
+        g.setColor(new Color(240, 246, 240));
+
+        FontMetrics fm = g.getFontMetrics();
+
+        String[] words = {
+                "PRESS",
+                "'SPACE'",
+                "TO",
+                "PLAY"
+        };
+
+        int gap = 15;
+
+        int totalWidth = 0;
+        for (String word : words) {
+            totalWidth += fm.stringWidth(word);
+        }
+        totalWidth += gap * (words.length - 1);
+
+        int x = (GameConfig.getRealScreenWidth() - totalWidth) / 2;
+        int centerY = (int)(GameConfig.getRealScreenHeight() * 0.5);
+
+        for (int i = 0; i < words.length; i++) {
+            double offsetY = Math.sin(menuTime * 3 + i * 0.8) * 10;
+
+            g.drawString(words[i], x, centerY + (int)offsetY);
+
+            x += fm.stringWidth(words[i]) + gap;
+        }
+    }
+
+    void drawGameOverUI(Graphics g) {
+        g.setColor(new Color(0, 0, 0, 220));
+        g.fillRect(
+                0,
+                0,
+                GameConfig.getRealScreenWidth(),
+                GameConfig.getRealScreenHeight()
+        );
+
+        g.setColor(new Color(240, 246, 240));
+
+        Font font = (Assets.pixelFont != null)
+                ? Assets.pixelFont
+                : g.getFont();
+
+        g.setFont(font.deriveFont(Font.PLAIN, 28f));
+
+        FontMetrics fm = g.getFontMetrics();
+
+        int centerX = GameConfig.getRealScreenWidth() / 2;
+        int centerY = GameConfig.getRealScreenHeight() / 2;
+
+        // GAME OVER
+        String[] gameOverWords = {
+                "GAME",
+                "OVER"
+        };
+
+        int gap = 20;
+
+        int totalWidth = 0;
+        for (String word : gameOverWords) {
+            totalWidth += fm.stringWidth(word);
+        }
+        totalWidth += gap * (gameOverWords.length - 1);
+
+        int x = centerX - totalWidth / 2;
+
+        for (int i = 0; i < gameOverWords.length; i++) {
+            double offsetY = Math.sin(menuTime * 3 + i * 0.8) * 10;
+
+            g.drawString(
+                    gameOverWords[i],
+                    x,
+                    centerY - 120 + (int) offsetY
+            );
+
+            x += fm.stringWidth(gameOverWords[i]) + gap;
+        }
+
+        // Stats
+        g.setFont(font.deriveFont(Font.PLAIN, 18f));
+
+        String wavesText = "WAVES SURVIVED: " + (currentWave - 1);
+        String killsText = "ENEMIES KILLED: " + totalEnemiesKilled;
+
+        g.drawString(
+                wavesText,
+                centerX - fm.stringWidth(wavesText) / 2,
+                centerY - 30
+        );
+
+        g.drawString(
+                killsText,
+                centerX - fm.stringWidth(killsText) / 2,
+                centerY + 10
+        );
+
+        // Try again text
+        String[] retryWords = {
+                "PRESS",
+                "'SPACE'",
+                "TO",
+                "TRY",
+                "AGAIN"
+        };
+
+        gap = 10;
+
+        g.setFont(font.deriveFont(Font.PLAIN, 18f));
+        fm = g.getFontMetrics();
+
+        totalWidth = 0;
+        for (String word : retryWords) {
+            totalWidth += fm.stringWidth(word);
+        }
+        totalWidth += gap * (retryWords.length - 1);
+
+        x = (centerX - totalWidth / 2) - 25;
+
+        for (int i = 0; i < retryWords.length; i++) {
+            double offsetY = Math.sin(menuTime * 4 + i * 0.8) * 8;
+
+            g.drawString(
+                    retryWords[i],
+                    x,
+                    centerY + 100 + (int) offsetY
+            );
+
+            x += fm.stringWidth(retryWords[i]) + gap;
+        }
+    }
+
+    void resetGame() {
+        baseStats = new BaseStats();
+        player.reset();
+
+        for (Entity entity : entities) {
+            if (entity instanceof Enemy enemy) {
+                enemy.destroyed = true;
+            }
+
+            if (entity instanceof EnemyProjectile enemyProjectile) {
+                enemyProjectile.destroyed = true;
+            }
+
+            if (entity instanceof PlayerProjectile playerProjectile) {
+                playerProjectile.destroyed = true;
+            }
+
+            if (entity instanceof Boss boss) {
+                boss.destroyed = true;
+            }
+
+            if (entity instanceof Thorn thorn) {
+                thorn.destroyed = true;
+            }
+        }
+    }
+
+    boolean isPlayerAlive() {
+        return player.health >= 0;
+    }
 
     void spawnRandomEnemy() {
         int roll = random.nextInt(100);
@@ -429,113 +740,6 @@ public class Game {
                 cards.add(selected);
             }
         }
-    }
-
-    void drawPlayerUI(Graphics g) {
-        g.setColor(new Color(240, 246, 240));
-        Font font = (Assets.pixelFont != null) ? Assets.pixelFont : g.getFont();
-
-        g.setFont(font.deriveFont(Font.PLAIN, 24.0f));
-
-        g.drawString(
-                "WAVE " + currentWave,
-                10,
-                30
-        );
-
-        g.drawString(
-                "HP " + Math.clamp(player.health, 0, player.maxHealth) + "/" + player.maxHealth,
-                10,
-                60
-        );
-
-        g.setColor(new Color(34, 35, 35));
-        g.fillRect(
-                10,
-                70,
-                (int)(((double) player.health / player.maxHealth) * 200.0),
-                20
-        );
-
-        int targetWidth = (int)(((double) player.health / player.maxHealth) * 200.0);
-
-        g.setColor(new Color(240, 246, 240));
-        g.drawRect(
-                10,
-                70,
-                Math.max(targetWidth, 2),
-                20
-        );
-
-        g.drawString(
-                enemiesKilled + "/" + enemiesToSpawn,
-                10,
-                120
-        );
-    }
-
-    void drawCards(Graphics g) {
-        int baseWidth = 85 * 2;
-        int baseHeight = 120 * 2;
-        int spacing = 40;
-
-        int totalWidth = cards.size() * baseWidth + (cards.size() - 1) * spacing;
-
-        int startX = (GameConfig.getRealScreenWidth() - totalWidth) / 2;
-        int baseY = (GameConfig.getRealScreenHeight() - baseHeight) / 2;
-
-        for (int i = 0; i < cards.size(); i++) {
-            Card card = cards.get(i);
-
-            int baseLayoutX = startX + i * (baseWidth + spacing);
-
-            double scaleFactor = 1.0 + (0.15 * card.hoverProgress);
-
-            int currentWidth = (int) (baseWidth * scaleFactor);
-            int currentHeight = (int) (baseHeight * scaleFactor);
-
-            int x = baseLayoutX - (currentWidth - baseWidth) / 2;
-            int y = baseY - (currentHeight - baseHeight) / 2;
-
-            card.bounds.setBounds(x, y, currentWidth, currentHeight);
-
-            g.setColor(new Color(34, 35, 35));
-            g.fillRect(x, y, currentWidth, currentHeight);
-
-            g.setColor(new Color(240, 246, 240));
-            g.drawRect(x, y, currentWidth, currentHeight);
-
-            Font currentFont = g.getFont();
-
-            float fontSize = (float) (18.0f + (3.0f * card.hoverProgress));
-            g.setFont(currentFont.deriveFont(fontSize));
-
-            g.drawString(card.name, x + 5, y + (int)(25 * scaleFactor));
-
-            String[] lines = card.description.split("\n");
-            int lineHeight = g.getFontMetrics().getHeight() - 5;
-            int textY = y + (int)(75 * scaleFactor);
-
-            for (String line : lines) {
-                g.drawString(line, x + 5, textY);
-                textY += lineHeight;
-            }
-
-            if (card.effect.isRare()) {
-                g.drawString("Rare", x + (int)((double) currentWidth / 2 - 20 * scaleFactor), y + (int)(currentHeight - 20 * scaleFactor));
-            }
-        }
-    }
-
-    void drawPauseUI(Graphics g) {
-        g.setColor(new Color(0, 0, 0, 200));
-        g.fillRect(0, 0, GameConfig.SCREEN_WIDTH * GameConfig.SCREEN_SCALE, GameConfig.SCREEN_HEIGHT * GameConfig.SCREEN_SCALE);
-
-        int xOffset = 50;
-        int yOffset = 10;
-
-        g.setColor(Color.WHITE);
-        g.drawString("PAUSED", GameConfig.SCREEN_WIDTH * GameConfig.SCREEN_SCALE / 2 - xOffset, GameConfig.SCREEN_HEIGHT * GameConfig.SCREEN_SCALE / 2 - yOffset);
     }
 
     Point gameToScreenPosition(Point position) {
