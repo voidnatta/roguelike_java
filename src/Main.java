@@ -3,7 +3,7 @@ import javax.swing.*;
 
 public class Main {
     static void main(String[] args) {
-        JFrame frame = new JFrame("Roguelike java");
+        JFrame frame = new JFrame("Duotone");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
 

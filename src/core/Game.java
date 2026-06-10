@@ -24,7 +24,7 @@ public class Game {
     public int enemiesKilled;
     public int totalEnemiesKilled = 0;
 
-    public GameState gameState = GameState.GAMEPLAY;
+    public GameState gameState = GameState.START_SCREEN;
     GameState lastState = GameState.GAMEPLAY;
 
     public Player player = new Player(this);

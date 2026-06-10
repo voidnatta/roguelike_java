@@ -20,6 +20,9 @@ public class FollowPlayerEnemy extends Enemy {
     double acceleration = 130;
     double friction = 3;
 
+    double timer;
+    double lastAttack;
+
     public FollowPlayerEnemy(Game _game) {
         super(_game);
 
@@ -42,6 +45,8 @@ public class FollowPlayerEnemy extends Enemy {
 
     @Override
     public void update(double delta) {
+        timer -= delta;
+
         if (game.player != null) {
             double targetX = game.player.x + randomXOffset;
             double targetY = game.player.y - randomXOffset;
@@ -99,7 +104,8 @@ public class FollowPlayerEnemy extends Enemy {
 
     @Override
     public void hit(Entity other) {
-        if (other instanceof Player player) {
+        if (other instanceof Player player && timer <= 0) {
+            timer = 1.0;
             player.applyDamage(5.0);
 
             double dx = player.x - x;

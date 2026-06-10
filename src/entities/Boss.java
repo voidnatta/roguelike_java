@@ -24,7 +24,7 @@ public class Boss extends Entity {
     double stateTimer = 2.0;
     int attackPhase = 0;
 
-    double health = 150.0;
+    double health = 200.0;
 
     double shootDuration = .2;
     double shootCooldown = .3;
