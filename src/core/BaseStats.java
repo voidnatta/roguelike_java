@@ -1,7 +1,7 @@
 package core;
 
 public class BaseStats {
-    public int playerBaseHealth = 100;
+    public int playerBaseHealth = 1;
     public int playerBaseMaxHealth = 100;
     public int playerBaseSpeed = 250;
 

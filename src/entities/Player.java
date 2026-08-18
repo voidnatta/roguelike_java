@@ -14,7 +14,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class Player extends Entity {
-    double speed = 250;
+    double speed = 200;
     public int health = 1;
     public int maxHealth = 100;
 
@@ -31,7 +31,7 @@ public class Player extends Entity {
     BufferedImage playerHitSprite;
 
     double shootTimer = 0;
-    double shootRate = 0.7; //0.8
+    double shootRate = 0.4; //0.8
     double hitTimer = -1.0;
 
     final int widthOffset = 4;
@@ -44,8 +44,6 @@ public class Player extends Entity {
 
         width = 16;
         height = 16;
-
-
 
         try {
             playerSprite = ImageIO.read(new File("assets/player.png"));
@@ -153,7 +151,7 @@ public class Player extends Entity {
         health -= amount;
         if (health <= 0) {
             //destroyed = true;
-            game.gameState = core.GameState.GAME_OVER_SCREEN;
+            game.setGameState(core.GameState.GAME_OVER_SCREEN);
         }
 
         TextFalling textFalling = new TextFalling(game, 0.6, "-" + String.format("%.2f", amount));

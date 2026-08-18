@@ -158,6 +158,8 @@ public class Boss extends Entity {
                             Thorn t = new Thorn(game, GameConfig.SCREEN_HEIGHT - 37);
                             t.x = 16.0 * thornIndex;
 
+                            SoundManager.play("click");
+
                             game.addEntity(t);
 
                             thornIndex++;

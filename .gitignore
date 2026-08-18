@@ -28,3 +28,10 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+# IDE files
+.idea/
+*.iml
+
+# Local workspace files
+/.idea/workspace.xml

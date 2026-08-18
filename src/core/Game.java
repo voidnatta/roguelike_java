@@ -24,8 +24,8 @@ public class Game {
     public int enemiesKilled;
     public int totalEnemiesKilled = 0;
 
-    public GameState gameState = GameState.START_SCREEN;
-    GameState lastState = GameState.GAMEPLAY;
+    public GameState gameState;
+    GameState lastState = GameState.START_SCREEN;
 
     public Player player = new Player(this);
     Ground ground = new Ground(this);
@@ -49,42 +49,43 @@ public class Game {
 
     Graphics2D g2;
 
-     public void init() {
-        startWave(1);
-        SoundManager.loop("music_3");
+    public void init() {
+        setGameState(GameState.START_SCREEN);
+
+        startWave(5);
 
         player.init();
 
         addEntity(player);
         addEntity(ground);
 
-        cardPool.add(new Card("Furious", "+15% damage",
+        cardPool.add(new Card("Furioso", "+15% dano",
                 new DamageEffect(false, 1.15)));
-        cardPool.add(new Card("Resistance", "+1 Projectile\nHP",
+        cardPool.add(new Card("Resistencia", "+1 projetil\nHP",
                 new ProjectHealthEffect(false, 1)));
-        cardPool.add(new Card("I'm Late", "+10% Projectile\nSpeed",
+        cardPool.add(new Card("Atrasado", "+10% velocidade do\nprojetil",
                 new SpeedEffect(false, 1.10)));
-        cardPool.add(new Card("Berserk", "+35% damage",
+        cardPool.add(new Card("Berserk", "+35% dano",
                 new DamageEffect(true, 1.35)));
-        cardPool.add(new Card("I'm Too Late", "+25% Projectile\nSpeed",
+        cardPool.add(new Card("Muito Atrasado", "+25% velocidade do\nprojetil",
                 new SpeedEffect(true, 1.25)));
-        cardPool.add(new Card("Hope", "+50 HP",
+        cardPool.add(new Card("Esperenca", "+50 HP",
                 new HealthEffect(false, 50)));
-        cardPool.add(new Card("Hope+", "+100 HP",
+        cardPool.add(new Card("Esperanca+", "+100 HP",
                 new HealthEffect(false, 100)));
-        cardPool.add(new Card("Save me", "+25% HP of Max \nHP",
+        cardPool.add(new Card("Me salve", "+25% HP do HP\nMax atual",
                 new MultiplyHealthEffect(false, 0.25)));
-        cardPool.add(new Card("Save me+", "+50% HP of Max \nHP",
+        cardPool.add(new Card("Me salve+", "+50% HP do HP\nMax atual",
                 new MultiplyHealthEffect(true, 0.50)));
-        cardPool.add(new Card("Stronger", "+25 Max HP",
+        cardPool.add(new Card("Forte", "+25 HP Maximo",
                 new MaxHealthEffect(false, 25)));
-        cardPool.add(new Card("Stronger+", "+50 Max HP",
+        cardPool.add(new Card("Forte+", "+50 HP Maximo",
                 new MaxHealthEffect(true, 50)));
-        cardPool.add(new Card("Pull the trigger", "+10% Fire rate",
+        cardPool.add(new Card("Puxe o gatilho", "+10% de disparos",
                 new FasterShooterEffect(false, 1-0.10)));
-        cardPool.add(new Card("Pull the trigger+", "+20% Fire rate",
+        cardPool.add(new Card("Puxe o gatilho+", "+20% de disparos",
                 new FasterShooterEffect(true, 1-0.20)));
-        cardPool.add(new Card("Bleeding", "entities.Enemy gets\n+1 damage \nevery second.\n(Can stack)",
+        cardPool.add(new Card("Sangrando", "Inimigo ganha\n+1 dano a\ncada segundo.\n(Pode acumular)",
                 new BleedEffect(true)));
 
         generateLevelUpCards();
@@ -98,7 +99,7 @@ public class Game {
         return entities;
     }
 
-     public void update(double delta) {
+    public void update(double delta) {
         if (gameState == GameState.GAME_OVER_SCREEN) {
             menuTime += delta;
 
@@ -106,7 +107,7 @@ public class Game {
                 resetGame();
                 startWave(1);
 
-                gameState = GameState.GAMEPLAY;
+                setGameState(GameState.GAMEPLAY);
             }
 
             return;
@@ -116,7 +117,7 @@ public class Game {
             menuTime += delta;
 
             if (Input.isKeyJustPressed(KeyEvent.VK_SPACE)) {
-                gameState = GameState.GAMEPLAY;
+                setGameState(GameState.GAMEPLAY);
             }
 
             return;
@@ -124,7 +125,7 @@ public class Game {
 
         if (gameState == GameState.PAUSED) {
             if (Input.isKeyJustPressed(KeyEvent.VK_ESCAPE)) {
-                gameState = lastState;
+                setGameState(lastState);
             }
 
             return;
@@ -133,7 +134,7 @@ public class Game {
         if (gameState == GameState.LEVEL_UP) {
             if (Input.isKeyJustPressed(KeyEvent.VK_ESCAPE)) {
                 lastState = gameState;
-                gameState = GameState.PAUSED;
+                setGameState(GameState.PAUSED);
             }
 
             int mouseX = Input.screenMousePosition.x;
@@ -152,7 +153,7 @@ public class Game {
             // pause
             if (Input.isKeyJustPressed(KeyEvent.VK_ESCAPE)) {
                 lastState = gameState;
-                gameState = GameState.PAUSED;
+                setGameState(GameState.PAUSED);
             }
 
             if (canShootTimer <= 0) {
@@ -248,7 +249,7 @@ public class Game {
                     }
                 }
                 generateLevelUpCards();
-                gameState = GameState.LEVEL_UP;
+                setGameState(GameState.LEVEL_UP);
             }
 
             for (int i = 0; i < entities.size(); i++) {
@@ -271,7 +272,41 @@ public class Game {
 
     }
 
-     public void draw(Graphics g) {
+    public GameState getGameState() {
+        return gameState;
+    }
+
+    public void setGameState(GameState newState) {
+        if (gameState == newState)
+            return;
+
+        gameState = newState;
+
+        IO.println(newState);
+
+
+        switch (newState) {
+            case GAMEPLAY -> {
+                if (isBossRound(currentWave)) {
+                    SoundManager.loop("music_2");
+                } else {
+                    SoundManager.loop("music_1");
+                }
+            }
+
+            case GAME_OVER_SCREEN -> {
+                SoundManager.loop("music_3");
+            }
+
+            case START_SCREEN -> SoundManager.loop("music_3");
+
+            case PAUSED, LEVEL_UP -> {
+                // Don't change music
+            }
+        }
+    }
+
+    public void draw(Graphics g) {
         Graphics2D bufferG = gameBuffer.createGraphics();
 
         bufferG.setColor(new Color(34, 35, 35));
@@ -696,7 +731,7 @@ public class Game {
                     currentWave++;
                     startWave(currentWave);
 
-                    gameState = GameState.GAMEPLAY;
+                    setGameState(GameState.GAMEPLAY);
 
                     SoundManager.play("powerUp");
                     canShoot = false;
